@@ -1,0 +1,16 @@
+To install:
+
+Download info files for python documentation
+
+    wget https://bitbucket.org/jonwaltman/pydoc-info/downloads/python.info.gz
+    gunzip python.info
+
+Then install the info files into the machine 
+
+    sudo cp python.info /usr/share/info
+    sudo install-info --info-dir=/usr/share/info python.info
+
+Then add the following to your ~/.emacs.d/init.el: (already done)
+
+    (add-to-list 'load-path "~/path/to/pydoc-info")
+    (require 'pydoc-info)
