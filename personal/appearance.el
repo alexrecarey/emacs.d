@@ -20,3 +20,7 @@
   scroll-margin 15
 ;  scroll-conservatively 10
   scroll-preserve-screen-position 0)
+
+
+;; Shell colors
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
