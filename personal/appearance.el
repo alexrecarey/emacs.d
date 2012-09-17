@@ -24,3 +24,8 @@
 
 ;; Shell colors
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+
+
+;; Select theme
+; (load-theme 'solarized-dark t)
+; (load-theme 'twilight-theme t)
