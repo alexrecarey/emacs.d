@@ -103,21 +103,21 @@ the curson at its beginning, according to the current mode."
   (interactive)
   (move-end-of-line nil)
   (open-line 1)
-  (next-line 1)
+  (forward-line 1)
   (indent-according-to-mode))
 
 (defun prelude-move-line-up ()
   "Move up the current line."
   (interactive)
   (transpose-lines 1)
-  (previous-line 2))
+  (forward-line -2))
 
 (defun prelude-move-line-down ()
   "Move down the current line."
   (interactive)
-  (next-line 1)
+  (forward-line 1)
   (transpose-lines 1)
-  (previous-line 1))
+  (forward-line -1))
 
 ;; add the ability to copy and cut the current line, without marking it
 (defadvice kill-ring-save (before slick-copy activate compile)
@@ -338,7 +338,7 @@ there's a region, all lines that region covers will be duplicated."
 The new command is named CMD-repeat.  CMD should be a quoted
 command.
 
-This allows you to bind the command to a compound keystroke and
+This allows you to bind the command to a compound keystroke andб
 repeat it with just the final key.  For example:
 
   (global-set-key (kbd \"C-c a\") (make-repeatable-command 'foo))
@@ -348,12 +348,21 @@ just invoke foo.  Typing C-c a a a will invoke foo three times,
 and so on."
   (fset (intern (concat (symbol-name cmd) "-repeat"))
         `(lambda ,(help-function-arglist cmd) ;; arg list
-           ,(format "A repeatable version of `%s'." (symbol-name cmd)) ;; doc string
+           ,(format "A repeatable version of `%s'."
+                    (symbol-name cmd)) ;; doc string
            ,(interactive-form cmd) ;; interactive form
            ;; see also repeat-message-function
            (setq last-repeatable-command ',cmd)
            (repeat nil)))
   (intern (concat (symbol-name cmd) "-repeat")))
+
+(defun prelude-create-scratch-buffer ()
+  "Create a new scratch buffer."
+  (interactive)
+  (progn
+    (switch-to-buffer
+     (get-buffer-create (generate-new-buffer-name "*scratch*")))
+    (emacs-lisp-mode)))
 
 (defvar prelude-tips
   '("Press <C-c o> to open a file with external program."
@@ -368,7 +377,8 @@ and so on."
 
 (defun prelude-tip-of-the-day ()
   (interactive)
-  (message (concat "Prelude tip: " (nth (random (length prelude-tips)) prelude-tips))))
+  (message
+   (concat "Prelude tip: " (nth (random (length prelude-tips)) prelude-tips))))
 
 (defun prelude-eval-after-init (form)
   "Add `(lambda () FORM)' to `after-init-hook'.
@@ -378,6 +388,12 @@ and so on."
     (add-hook 'after-init-hook func)
     (when after-init-time
       (eval form))))
+
+(defun prelude-exchange-point-and-mark ()
+  "Identical to `exchange-point-and-mark' but will not activate the region."
+  (interactive)
+  (exchange-point-and-mark)
+  (deactivate-mark nil))
 
 (provide 'prelude-core)
 ;;; prelude-core.el ends here
