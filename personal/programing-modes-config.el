@@ -1,6 +1,6 @@
 ;; Configure ENSIME for Scala
 ;; Load the ensime lisp code...
-(add-to-list 'load-path "vendor/ensime_2.9.1-0.7.6/elisp/")
+(add-to-list 'load-path "~/.emacs.d/vendor/ensime_2.9.1-0.7.6/elisp/")
 (require 'ensime)
 
 ;; This step causes the ensime-mode to be started whenever
@@ -10,3 +10,6 @@
 
 ;; MINI HOWTO:
 ;; Open .scala file. M-x ensime (once per project)
+
+;; Automatically open .scala files with scala-mode
+(require 'scala-mode-auto)

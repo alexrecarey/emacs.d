@@ -13,6 +13,9 @@
     prelude-ruby
     prelude-xml
     prelude-scss   ; edit SCSS files (Sass)
+    prelude-latex
+    prelude-mediawiki
+    prelude-scheme
     pony-mode      ; Mode for editing django files
     lua-mode       ; Mode for editing lua
     less-css-mode  ; Edit less css files
