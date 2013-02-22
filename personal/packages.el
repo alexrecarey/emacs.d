@@ -13,6 +13,10 @@
     prelude-ruby
     prelude-xml
     prelude-scss   ; edit SCSS files (Sass)
+    multiple-cursors ; Use multiple cursors at the same time. Awesome!
+    ;mark-more-like-this
+    mark-multiple
+    expand-region
     pony-mode      ; Mode for editing django files
     lua-mode       ; Mode for editing lua
     less-css-mode  ; Edit less css files
