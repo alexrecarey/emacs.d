@@ -15,5 +15,5 @@ custom.el
 places
 .smex-items
 savefile/
-
 session.*
+/prelude-modules.el

@@ -1,6 +1,6 @@
 ;;; prelude-core.el --- Emacs Prelude: core Prelude defuns.
 ;;
-;; Copyright (c) 2011-2012 Bozhidar Batsov
+;; Copyright © 2011-2013 Bozhidar Batsov
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 ;; URL: http://batsov.com/emacs-prelude
@@ -32,18 +32,7 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'thingatpt)
-
-(defun prelude-add-subfolders-to-load-path (parent-dir)
-  "Adds all first level `parent-dir' subdirs to the
-Emacs load path."
-  (dolist (f (directory-files parent-dir))
-    (let ((name (concat parent-dir f)))
-      (when (and (file-directory-p name)
-                 (not (equal f ".."))
-                 (not (equal f ".")))
-        (add-to-list 'load-path name)))))
 
 (defun prelude-open-with ()
   "Simple function that allows us to open the underlying
@@ -63,8 +52,11 @@ file of a buffer in an external program."
 (defun prelude-visit-term-buffer ()
   (interactive)
   (if (not (get-buffer "*ansi-term*"))
-      (ansi-term (getenv "SHELL"))
-    (switch-to-buffer "*ansi-term*")))
+      (progn
+        (split-window-sensibly (selected-window))
+        (other-window 1)
+        (ansi-term (getenv "SHELL")))
+    (switch-to-buffer-other-window "*ansi-term*")))
 
 (defun prelude-google ()
   "Googles a query or region if any."
@@ -119,22 +111,6 @@ the curson at its beginning, according to the current mode."
   (transpose-lines 1)
   (forward-line -1))
 
-;; add the ability to copy and cut the current line, without marking it
-(defadvice kill-ring-save (before slick-copy activate compile)
-  "When called interactively with no active region, copy a single line instead."
-  (interactive
-   (if mark-active (list (region-beginning) (region-end))
-     (message "Copied line")
-     (list (line-beginning-position)
-           (line-beginning-position 2)))))
-
-(defadvice kill-region (before slick-cut activate compile)
-  "When called interactively with no active region, kill a single line instead."
-  (interactive
-   (if mark-active (list (region-beginning) (region-end))
-     (list (line-beginning-position)
-           (line-beginning-position 2)))))
-
 (defun prelude-indent-buffer ()
   "Indents the entire buffer."
   (interactive)
@@ -187,11 +163,12 @@ there's a region, all lines that region covers will be duplicated."
         (exchange-point-and-mark))
     (setq end (line-end-position))
     (let ((region (buffer-substring-no-properties beg end)))
-      (dotimes (i arg)
-        (goto-char end)
-        (newline)
-        (insert region)
-        (setq end (point)))
+      (-dotimes arg
+                (lambda (n)
+                  (goto-char end)
+                  (newline)
+                  (insert region)
+                  (setq end (point))))
       (goto-char (+ origin (* (length region) arg) arg)))))
 
 ;; TODO doesn't work with uniquify
@@ -230,23 +207,6 @@ there's a region, all lines that region covers will be duplicated."
     ;; TODO: switch to nxml/nxhtml mode
     (cond ((search-forward "<?xml" nil t) (xml-mode))
           ((search-forward "<html" nil t) (html-mode)))))
-
-;; We have a number of turn-on-* functions since it's advised that lambda
-;; functions not go in hooks. Repeatedly evaluating an add-to-list with a
-;; hook value will repeatedly add it since there's no way to ensure
-;; that a lambda doesn't already exist in the list.
-
-(defun prelude-turn-on-whitespace ()
-  (whitespace-mode +1))
-
-(defun prelude-turn-off-whitespace ()
-  (whitespace-mode -1))
-
-(defun prelude-turn-on-abbrev ()
-  (abbrev-mode +1))
-
-(defun prelude-turn-off-abbrev ()
-  (abbrev-mode -1))
 
 (defun prelude-untabify-buffer ()
   (interactive)
@@ -312,8 +272,8 @@ there's a region, all lines that region covers will be duplicated."
   (interactive)
   (if (/= (count-windows) 2)
       (message "You need exactly 2 windows to do this.")
-    (let* ((w1 (first (window-list)))
-           (w2 (second (window-list)))
+    (let* ((w1 (car (window-list)))
+           (w2 (cadr (window-list)))
            (b1 (window-buffer w1))
            (b2 (window-buffer w2))
            (s1 (window-start w1))
@@ -327,9 +287,11 @@ there's a region, all lines that region covers will be duplicated."
 (defun prelude-kill-other-buffers ()
   "Kill all buffers but the current one. Doesn't mess with special buffers."
   (interactive)
-  (dolist (buffer (buffer-list))
-    (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-      (kill-buffer buffer))))
+  (-each
+   (->> (buffer-list)
+     (-filter #'buffer-file-name)
+     (--remove (eql (current-buffer) it)))
+   #'kill-buffer))
 
 (require 'repeat)
 
@@ -377,6 +339,8 @@ and so on."
 
 (defun prelude-tip-of-the-day ()
   (interactive)
+  ;; pick a new random seed
+  (random t)
   (message
    (concat "Prelude tip: " (nth (random (length prelude-tips)) prelude-tips))))
 
