@@ -1,18 +1,6 @@
 ; Install list of packages
 (setq personal-package-list
-  '(prelude-c
-    prelude-clojure
-    prelude-coffee
-    prelude-common-lisp
-    prelude-css
-    prelude-erlang
-    prelude-haskell
-    prelude-js
-    prelude-perl
-    prelude-python
-    prelude-ruby
-    prelude-xml
-    prelude-scss   ; edit SCSS files (Sass)
+  '(
     multiple-cursors ; Use multiple cursors at the same time. Awesome!
     ;mark-more-like-this
     mark-multiple
