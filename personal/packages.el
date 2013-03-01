@@ -1,21 +1,10 @@
 ; Install list of packages
 (setq personal-package-list
-  '(prelude-c
-    prelude-clojure
-    prelude-coffee
-    prelude-common-lisp
-    prelude-css
-    prelude-erlang
-    prelude-haskell
-    prelude-js
-    prelude-perl
-    prelude-python
-    prelude-ruby
-    prelude-xml
-    prelude-scss   ; edit SCSS files (Sass)
-    prelude-latex
-    prelude-mediawiki
-    prelude-scheme
+  '(
+    multiple-cursors ; Use multiple cursors at the same time. Awesome!
+    ;mark-more-like-this
+    mark-multiple
+    expand-region
     pony-mode      ; Mode for editing django files
     lua-mode       ; Mode for editing lua
     less-css-mode  ; Edit less css files

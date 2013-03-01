@@ -1,6 +1,6 @@
 ;;; prelude-core.el --- Emacs Prelude: core Prelude defuns.
 ;;
-;; Copyright (c) 2011-2012 Bozhidar Batsov
+;; Copyright © 2011-2013 Bozhidar Batsov
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 ;; URL: http://batsov.com/emacs-prelude
@@ -32,18 +32,7 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'thingatpt)
-
-(defun prelude-add-subfolders-to-load-path (parent-dir)
-  "Adds all first level `parent-dir' subdirs to the
-Emacs load path."
-  (dolist (f (directory-files parent-dir))
-    (let ((name (concat parent-dir f)))
-      (when (and (file-directory-p name)
-                 (not (equal f ".."))
-                 (not (equal f ".")))
-        (add-to-list 'load-path name)))))
 
 (defun prelude-open-with ()
   "Simple function that allows us to open the underlying
@@ -63,8 +52,11 @@ file of a buffer in an external program."
 (defun prelude-visit-term-buffer ()
   (interactive)
   (if (not (get-buffer "*ansi-term*"))
-      (ansi-term (getenv "SHELL"))
-    (switch-to-buffer "*ansi-term*")))
+      (progn
+        (split-window-sensibly (selected-window))
+        (other-window 1)
+        (ansi-term (getenv "SHELL")))
+    (switch-to-buffer-other-window "*ansi-term*")))
 
 (defun prelude-google ()
   "Googles a query or region if any."
@@ -103,37 +95,21 @@ the curson at its beginning, according to the current mode."
   (interactive)
   (move-end-of-line nil)
   (open-line 1)
-  (next-line 1)
+  (forward-line 1)
   (indent-according-to-mode))
 
 (defun prelude-move-line-up ()
   "Move up the current line."
   (interactive)
   (transpose-lines 1)
-  (previous-line 2))
+  (forward-line -2))
 
 (defun prelude-move-line-down ()
   "Move down the current line."
   (interactive)
-  (next-line 1)
+  (forward-line 1)
   (transpose-lines 1)
-  (previous-line 1))
-
-;; add the ability to copy and cut the current line, without marking it
-(defadvice kill-ring-save (before slick-copy activate compile)
-  "When called interactively with no active region, copy a single line instead."
-  (interactive
-   (if mark-active (list (region-beginning) (region-end))
-     (message "Copied line")
-     (list (line-beginning-position)
-           (line-beginning-position 2)))))
-
-(defadvice kill-region (before slick-cut activate compile)
-  "When called interactively with no active region, kill a single line instead."
-  (interactive
-   (if mark-active (list (region-beginning) (region-end))
-     (list (line-beginning-position)
-           (line-beginning-position 2)))))
+  (forward-line -1))
 
 (defun prelude-indent-buffer ()
   "Indents the entire buffer."
@@ -187,11 +163,12 @@ there's a region, all lines that region covers will be duplicated."
         (exchange-point-and-mark))
     (setq end (line-end-position))
     (let ((region (buffer-substring-no-properties beg end)))
-      (dotimes (i arg)
-        (goto-char end)
-        (newline)
-        (insert region)
-        (setq end (point)))
+      (-dotimes arg
+                (lambda (n)
+                  (goto-char end)
+                  (newline)
+                  (insert region)
+                  (setq end (point))))
       (goto-char (+ origin (* (length region) arg) arg)))))
 
 ;; TODO doesn't work with uniquify
@@ -230,23 +207,6 @@ there's a region, all lines that region covers will be duplicated."
     ;; TODO: switch to nxml/nxhtml mode
     (cond ((search-forward "<?xml" nil t) (xml-mode))
           ((search-forward "<html" nil t) (html-mode)))))
-
-;; We have a number of turn-on-* functions since it's advised that lambda
-;; functions not go in hooks. Repeatedly evaluating an add-to-list with a
-;; hook value will repeatedly add it since there's no way to ensure
-;; that a lambda doesn't already exist in the list.
-
-(defun prelude-turn-on-whitespace ()
-  (whitespace-mode +1))
-
-(defun prelude-turn-off-whitespace ()
-  (whitespace-mode -1))
-
-(defun prelude-turn-on-abbrev ()
-  (abbrev-mode +1))
-
-(defun prelude-turn-off-abbrev ()
-  (abbrev-mode -1))
 
 (defun prelude-untabify-buffer ()
   (interactive)
@@ -312,8 +272,8 @@ there's a region, all lines that region covers will be duplicated."
   (interactive)
   (if (/= (count-windows) 2)
       (message "You need exactly 2 windows to do this.")
-    (let* ((w1 (first (window-list)))
-           (w2 (second (window-list)))
+    (let* ((w1 (car (window-list)))
+           (w2 (cadr (window-list)))
            (b1 (window-buffer w1))
            (b2 (window-buffer w2))
            (s1 (window-start w1))
@@ -327,9 +287,11 @@ there's a region, all lines that region covers will be duplicated."
 (defun prelude-kill-other-buffers ()
   "Kill all buffers but the current one. Doesn't mess with special buffers."
   (interactive)
-  (dolist (buffer (buffer-list))
-    (unless (or (eql buffer (current-buffer)) (not (buffer-file-name buffer)))
-      (kill-buffer buffer))))
+  (-each
+   (->> (buffer-list)
+     (-filter #'buffer-file-name)
+     (--remove (eql (current-buffer) it)))
+   #'kill-buffer))
 
 (require 'repeat)
 
@@ -338,7 +300,7 @@ there's a region, all lines that region covers will be duplicated."
 The new command is named CMD-repeat.  CMD should be a quoted
 command.
 
-This allows you to bind the command to a compound keystroke and
+This allows you to bind the command to a compound keystroke andб
 repeat it with just the final key.  For example:
 
   (global-set-key (kbd \"C-c a\") (make-repeatable-command 'foo))
@@ -348,12 +310,21 @@ just invoke foo.  Typing C-c a a a will invoke foo three times,
 and so on."
   (fset (intern (concat (symbol-name cmd) "-repeat"))
         `(lambda ,(help-function-arglist cmd) ;; arg list
-           ,(format "A repeatable version of `%s'." (symbol-name cmd)) ;; doc string
+           ,(format "A repeatable version of `%s'."
+                    (symbol-name cmd)) ;; doc string
            ,(interactive-form cmd) ;; interactive form
            ;; see also repeat-message-function
            (setq last-repeatable-command ',cmd)
            (repeat nil)))
   (intern (concat (symbol-name cmd) "-repeat")))
+
+(defun prelude-create-scratch-buffer ()
+  "Create a new scratch buffer."
+  (interactive)
+  (progn
+    (switch-to-buffer
+     (get-buffer-create (generate-new-buffer-name "*scratch*")))
+    (emacs-lisp-mode)))
 
 (defvar prelude-tips
   '("Press <C-c o> to open a file with external program."
@@ -368,7 +339,10 @@ and so on."
 
 (defun prelude-tip-of-the-day ()
   (interactive)
-  (message (concat "Prelude tip: " (nth (random (length prelude-tips)) prelude-tips))))
+  ;; pick a new random seed
+  (random t)
+  (message
+   (concat "Prelude tip: " (nth (random (length prelude-tips)) prelude-tips))))
 
 (defun prelude-eval-after-init (form)
   "Add `(lambda () FORM)' to `after-init-hook'.
@@ -378,6 +352,12 @@ and so on."
     (add-hook 'after-init-hook func)
     (when after-init-time
       (eval form))))
+
+(defun prelude-exchange-point-and-mark ()
+  "Identical to `exchange-point-and-mark' but will not activate the region."
+  (interactive)
+  (exchange-point-and-mark)
+  (deactivate-mark nil))
 
 (provide 'prelude-core)
 ;;; prelude-core.el ends here
